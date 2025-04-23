@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include "libz80/z80.h" // Make sure this points to your libz80 header
+#include <z80.h> // Make sure this points to your libz80 header
 
 #define RAM_SIZE 0x10000 // 64KB max addressable by Z80
 
