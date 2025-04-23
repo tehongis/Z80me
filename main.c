@@ -46,10 +46,10 @@ int load_rom(const char* filename,ushort address) {
 
 int main(int argc, char* argv[]) {
 
-    if (!load_rom("CPMjump.bin",0x0000)) {
+    if (!load_rom("CPM/CPMjump.bin",0x0000)) {
         return 1;
     }
-    if (!load_rom("CPM22.bin",0xdc00)) {
+    if (!load_rom("CPM/CPM22.bin",0xdc00)) {
         return 1;
     }
 
