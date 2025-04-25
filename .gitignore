@@ -50,6 +50,13 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+<<<<<<< HEAD
 CPM/CPM22.bin
 CPM/CPMjump.bin
 .gitignore
+=======
+Z80me
+.gitignore
+CPM22.bin
+CPMjump.bin
+>>>>>>> 66f97ca (z80 binaries added to ignore)
