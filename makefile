@@ -1,7 +1,7 @@
 
 CC = gcc
 CFLAGS = -Wall
-LDFLAGS = -L. -lz80
+LDFLAGS = -L. -lz80 -lSDL2
 OBJ = main.o
 TARGET = Z80me
 

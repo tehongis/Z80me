@@ -2,8 +2,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <SDL2/SDL.h>
 #include <z80.h> // Make sure this points to your libz80 header
 
+#define TEXTURE_WIDTH 256
+#define TEXTURE_HEIGHT 256
+#define SCALE 2
 #define RAM_SIZE 0x10000 // 64KB max addressable by Z80
 
 uint8_t memory[RAM_SIZE];
@@ -46,6 +50,35 @@ int load_rom(const char* filename,ushort address) {
 
 int main(int argc, char* argv[]) {
 
+
+    // Initialize SDL
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+        return 1;
+    }
+
+    // Create a window
+    SDL_Window* window = SDL_CreateWindow("Byte Array Texture", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                                          TEXTURE_WIDTH*SCALE, TEXTURE_HEIGHT*SCALE, SDL_WINDOW_SHOWN);
+    if (window == NULL) {
+        fprintf(stderr, "Window could not be created! SDL_Error: %s\n", SDL_GetError());
+        SDL_Quit();
+        return 1;
+    }
+
+    // Create a renderer
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    if (renderer == NULL) {
+        fprintf(stderr, "Renderer could not be created! SDL_Error: %s\n", SDL_GetError());
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+
+
+
+
+    // Load roms
     if (!load_rom("CPM/CPMjump.bin",0x0000)) {
         return 1;
     }
@@ -61,14 +94,70 @@ int main(int argc, char* argv[]) {
     cpu.ioRead = context_io_read_callback;
     cpu.ioWrite = context_io_write_callback;
 
-    printf("Starting emulation...\n");
-    while (!cpu.halted) {
-        printf("PC: 0x%04X\n", cpu.PC);
-        Z80Execute(&cpu);
-        sleep(1);
+    // Create a texture
+    SDL_Texture* texture = SDL_CreateTexture(renderer, 
+        SDL_PIXELFORMAT_RGBA8888, 
+        SDL_TEXTUREACCESS_STREAMING, 
+        TEXTURE_WIDTH, 
+        TEXTURE_HEIGHT);
+
+    if (texture == NULL) {
+        fprintf(stderr, "Texture could not be created! SDL_Error: %s\n", SDL_GetError());
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
     }
 
-    printf("PC: 0x%04X\n", cpu.PC);
+
+    // Keep the window open until the user closes it
+    SDL_Event event;
+    int quit = 0;
+    while (!quit) {
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT) {
+                quit = 1;
+            }
+        }
+        if (cpu.halted) {
+            quit = 1;
+        }
+        //printf("PC: 0x%04X\n", cpu.PC);
+        Z80Execute(&cpu);
+        // Update the texture with the byte array data. This is necessary as CreateTextureFromSurface is deprecated.
+        SDL_UpdateTexture(texture, NULL, memory, TEXTURE_WIDTH); // RGBA8888 is 4 bytes per pixel
+        SDL_Rect dest_rect = { 0, 0, TEXTURE_WIDTH*SCALE, TEXTURE_HEIGHT*SCALE };
+        // Render the texture to the screen
+        SDL_RenderCopy(renderer, texture, NULL, &dest_rect);
+        SDL_RenderPresent(renderer);
+        //SDL_UpdateWindowSurface(window);
+        SDL_Delay(50);
+    }
+
+    // Clean up
+    SDL_DestroyTexture(texture);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 
     return 0;
 }
+
+
+/*
+    // Allocate memory for the byte array
+    unsigned char* byteArray = (unsigned char*)malloc(BYTE_ARRAY_SIZE);
+    if (byteArray == NULL) {
+        fprintf(stderr, "Memory allocation failed! SDL_Error: %s\n", SDL_GetError());
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+
+    // Fill the byte array with some data.  Replace this with your actual data source.
+    for (int i = 0; i < BYTE_ARRAY_SIZE; ++i) {
+        byteArray[i] = (unsigned char)(rand() % 256);  // Example: random bytes
+    }
+
+*/
