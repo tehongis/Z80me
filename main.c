@@ -7,7 +7,7 @@
 
 #define TEXTURE_WIDTH 256
 #define TEXTURE_HEIGHT 256
-#define SCALE 2
+#define SCALE 3
 #define RAM_SIZE 0x10000 // 64KB max addressable by Z80
 
 uint8_t memory[RAM_SIZE];
@@ -15,12 +15,12 @@ Z80Context cpu;
 
 static byte context_mem_read_callback(size_t param, ushort address) {
     byte data = memory[address];
-    printf("memR %04x %02x\n", address, data);
+    //printf("memR %04x %02x\n", address, data);
     return data;
 }
 
 static void context_mem_write_callback(size_t param, ushort address, byte data) {
-    printf("memW %04x %02x\n", address, data);
+    //printf("memW %04x %02x\n", address, data);
     memory[address] = data;
 }
 
@@ -122,16 +122,17 @@ int main(int argc, char* argv[]) {
         if (cpu.halted) {
             quit = 1;
         }
-        //printf("PC: 0x%04X\n", cpu.PC);
-        Z80Execute(&cpu);
         // Update the texture with the byte array data. This is necessary as CreateTextureFromSurface is deprecated.
         SDL_UpdateTexture(texture, NULL, memory, TEXTURE_WIDTH); // RGBA8888 is 4 bytes per pixel
-        SDL_Rect dest_rect = { 0, 0, TEXTURE_WIDTH*SCALE, TEXTURE_HEIGHT*SCALE };
+        SDL_Rect dest_rect = { 0, 0, TEXTURE_WIDTH, TEXTURE_HEIGHT };
         // Render the texture to the screen
         SDL_RenderCopy(renderer, texture, NULL, &dest_rect);
         SDL_RenderPresent(renderer);
         //SDL_UpdateWindowSurface(window);
-        SDL_Delay(50);
+        //SDL_Delay(5);
+        //printf("PC: 0x%04X\n", cpu.PC);
+        Z80Execute(&cpu);
+
     }
 
     // Clean up
