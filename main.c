@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <SDL2/SDL.h>
 #include <z80.h> // Make sure this points to your libz80 header
@@ -26,12 +27,12 @@ static void context_mem_write_callback(size_t param, ushort address, byte data) 
 
 static byte context_io_read_callback(size_t param, ushort address) {
   byte data = address >> 8;
-  printf("ioR %04x %02x\n", address, data);
+  //printf("ioR %04x %02x\n", address, data);
   return data;
 }
 
 static void context_io_write_callback(size_t param, ushort address, byte data) {
-  printf("ioW %04x %02x\n", address, data);
+  //printf("ioW %04x %02x\n", address, data);
 }
 
 int load_rom(const char* filename,ushort address) {
@@ -56,7 +57,7 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
         return 1;
     }
-
+/*
     // Create a window
     SDL_Window* window = SDL_CreateWindow("Byte Array Texture", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                                           TEXTURE_WIDTH*SCALE, TEXTURE_HEIGHT*SCALE, SDL_WINDOW_SHOWN);
@@ -75,11 +76,10 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-
-
+*/
 
     // Load roms
-    if (!load_rom("CPM/CPMjump.bin",0x0000)) {
+    if (!load_rom("CPM/BIOS.bin",0x0000)) {
         return 1;
     }
     if (!load_rom("CPM/CPM22.bin",0xdc00)) {
@@ -93,7 +93,7 @@ int main(int argc, char* argv[]) {
     cpu.memWrite = context_mem_write_callback;
     cpu.ioRead = context_io_read_callback;
     cpu.ioWrite = context_io_write_callback;
-
+/*
     // Create a texture
     SDL_Texture* texture = SDL_CreateTexture(renderer, 
         SDL_PIXELFORMAT_RGBA8888, 
@@ -109,19 +109,19 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-
     // Keep the window open until the user closes it
+*/
     SDL_Event event;
-    int quit = 0;
-    while (!quit) {
+
+    int RUNNING = true;
+    while (RUNNING) {
+
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
-                quit = 1;
+                RUNNING = false;
             }
         }
-        if (cpu.halted) {
-            quit = 1;
-        }
+/*
         // Update the texture with the byte array data. This is necessary as CreateTextureFromSurface is deprecated.
         SDL_UpdateTexture(texture, NULL, memory, TEXTURE_WIDTH); // RGBA8888 is 4 bytes per pixel
         SDL_Rect dest_rect = { 0, 0, TEXTURE_WIDTH, TEXTURE_HEIGHT };
@@ -129,16 +129,22 @@ int main(int argc, char* argv[]) {
         SDL_RenderCopy(renderer, texture, NULL, &dest_rect);
         SDL_RenderPresent(renderer);
         //SDL_UpdateWindowSurface(window);
-        //SDL_Delay(5);
-        //printf("PC: 0x%04X\n", cpu.PC);
+*/
+        SDL_Delay(5);
+
+        printf("PC: 0x%04X\n", cpu.PC);
         Z80Execute(&cpu);
+
+        if (cpu.halted) {
+            RUNNING = false;
+        }
 
     }
 
     // Clean up
-    SDL_DestroyTexture(texture);
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
+//    SDL_DestroyTexture(texture);
+//    SDL_DestroyRenderer(renderer);
+//    SDL_DestroyWindow(window);
     SDL_Quit();
 
     return 0;

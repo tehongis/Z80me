@@ -1,0 +1,39 @@
+
+	org 0x0000
+main:
+
+	JP	0xDC00	;-3: Cold start routine
+	JP	0xDC00	; 0: Warm boot - reload command processor
+	JP	CONST	; 3: Console status
+	JP	CONIN	; 6: Console input
+	JP	CONOUT	; 9: Console output
+;	JMP	LIST	;12: Printer output
+;	JMP	PUNCH	;15: Paper tape punch output
+;   JMP     READER	;18: Paper tape reader input
+;	JMP	HOME	;21: Move disc head to track 0
+;	JMP	SELDSK	;24: Select disc drive
+;	JMP	SETTRK	;27: Set track number
+;	JMP	SETSEC	;30: Set sector number
+;	JMP	SETDMA	;33: Set DMA address
+;	JMP	READ	;36: Read a sector
+;	JMP	WRITE	;39: Write a sector
+;In CP/M 2 and later, the following extra jumps appear:
+
+;	JMP	LISTST	;42: Status of list device
+;	JMP	SECTRAN	;45: Sector translation for skewing
+
+CONST:
+;Returns its status in A; 0 if no character is ready, 0FFh if one is.
+	LD A,0x00
+	RET
+
+CONIN:
+;Wait until the keyboard is ready to provide a character, and return it in A.
+	LD A,0x20
+	RET
+
+CONOUT:
+;Write the character in C to the screen.	
+	LD C,'C'
+	HALT
+	RET
