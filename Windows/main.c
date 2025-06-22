@@ -38,18 +38,18 @@ static void context_io_write_callback(size_t param, ushort address, byte data) {
 uint8_t framebuffer[RAM_SIZE * 3];
 
 int load_rom(const char *filename, ushort loadAddress) {
-
+    
     FILE *file;
-
+    
     fopen_s(&file, filename, "rb");
     if (file == NULL) {
         MessageBox(NULL, L"Could not open the file.", L"File Error", MB_ICONERROR);
         return ERROR_FILE_NOT_FOUND;
     }
-
+    
     // Read file into memory
     size_t bytesRead = fread(memory+loadAddress, 1, RAM_SIZE-1, file);
-
+    
     fclose(file);
     return 0;
 }
@@ -73,20 +73,27 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
         
         case WM_PAINT: {
-            
             PAINTSTRUCT ps;
             HBRUSH hBrush = CreateSolidBrush(RGB(155, 155, 155)); // Gray
 
-            HDC hdc = BeginPaint(hwnd, &ps);
+            /* Double buffering for flicker-free rendering
+            HDC hdcMem = CreateCompatibleDC(hdc);
+            HBITMAP hbmMem = CreateCompatibleBitmap(hdc, width, height);
+            HBITMAP hbmOld = SelectObject(hdcMem, hbmMem);
+            */
 
+            // Begin painting            
+
+            HDC hdc = BeginPaint(hwnd, &ps);
+            
             // Get the client rectangle
             RECT clientRect;
             GetClientRect(hwnd, &clientRect);
             
             // Fill the background with a solid color (e.g., white)
             FillRect(hdc, &clientRect, hBrush);
-
-
+            
+            
             // Set text color and background mode
             SetTextColor(hdc, RGB(0, 0, 0));
             SetBkMode(hdc, TRANSPARENT);
@@ -97,6 +104,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             // Format the string with a hexadecimal number
             wsprintf(buffer, TEXT("%s 0x%04X"), label, cpu.PC);
             TextOut(hdc, 1000, 20, buffer, lstrlen(buffer));
+            
             
             // Fill framebuffer from Z80 memory (grayscale)
             for (int address = 0; address < RAM_SIZE; address++) {
@@ -118,6 +126,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                 framebuffer[idx + 2] = red;
             }
             
+            // Highlight the PC in the framebuffer
+            int idx = cpu.PC * 3;
+            framebuffer[idx + 0] = 0xff ;
+            framebuffer[idx + 1] = 0xff;
+            framebuffer[idx + 2] = 0xff;
+            
+            
+            
             // Prepare BITMAPINFO
             BITMAPINFO bmi = {0};
             bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -128,30 +144,44 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             bmi.bmiHeader.biCompression = BI_RGB;
             
             // Blit to window
-/*
+            /*
             SetDIBitsToDevice(
-                hdc,
-                64, 64, 256, 256, // dest x, y, width, height
-                0, 0, 0, 256,   // src x, y, start scan, num scans
-                framebuffer,
-                &bmi,
-                DIB_RGB_COLORS
+            hdc,
+            64, 64, 256, 256, // dest x, y, width, height
+            0, 0, 0, 256,   // src x, y, start scan, num scans
+            framebuffer,
+            &bmi,
+            DIB_RGB_COLORS
             );
-*/
-        StretchDIBits(
-            hdc,               // destination DC
-            2, 2,      // destination x, y
-            256 * 3,         // scaled width
-            256 * 3,        // scaled height
-            0, 0,              // source x, y
-            256, 256,     // source width, height
-            framebuffer,           // pointer to bitmap bits
-            &bmi,              // BITMAPINFO structure
-            DIB_RGB_COLORS,    // color usage
-            SRCCOPY            // raster operation
-        );            
+            */
+            StretchDIBits(
+                hdc,               // destination DC
+                2, 2,      // destination x, y
+                256 * 3,         // scaled width
+                256 * 3,        // scaled height
+                0, 0,              // source x, y
+                256, 256,     // source width, height
+                framebuffer,           // pointer to bitmap bits
+                &bmi,              // BITMAPINFO structure
+                DIB_RGB_COLORS,    // color usage
+                SRCCOPY            // raster operation
+            );            
+
+            // Blit the framebuffer to the window
+            //            BitBlt(hdc, 0, 0, width, height, hdcMem, 0, 0, SRCCOPY);
+
+
+
             // Clean up
-            DeleteObject(hBrush);                        
+            DeleteObject(hBrush);
+            
+            // Delete the memory DC and bitmap
+            /*
+            SelectObject(hdcMem, hbmOld);
+            DeleteObject(hbmMem);
+            DeleteDC(hdcMem);
+            */
+            
             EndPaint(hwnd, &ps);
             return 0;            
         }
@@ -168,11 +198,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-
+    
     // Initialize Z80 CPU state and memory
     // Load roms
     load_rom("BIOS.bin",0x0000);
-
+    
     // Initialize Z80 CPU
     Z80RESET(&cpu);
     

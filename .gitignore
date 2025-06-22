@@ -4,3 +4,6 @@ Windows/*.bin
 Windows/Z80me.exe
 Windows/z80.obj
 Windows/main.obj
+Windows/main.obj
+Windows/Z80me.exe
+Windows/z80.obj
