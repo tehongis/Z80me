@@ -47,7 +47,7 @@ int load_rom(const char *filename, ushort loadAddress) {
         return ERROR_FILE_NOT_FOUND;
     }
 
-        // Read file into memory
+    // Read file into memory
     size_t bytesRead = fread(memory+loadAddress, 1, RAM_SIZE-1, file);
 
     fclose(file);
@@ -75,6 +75,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         case WM_PAINT: {
             
             PAINTSTRUCT ps;
+            HBRUSH hBrush = CreateSolidBrush(RGB(155, 155, 155)); // Gray
+
             HDC hdc = BeginPaint(hwnd, &ps);
 
             // Get the client rectangle
@@ -82,9 +84,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             GetClientRect(hwnd, &clientRect);
             
             // Fill the background with a solid color (e.g., white)
-            HBRUSH hBrush = CreateSolidBrush(RGB(155, 155, 155)); // Gray
             FillRect(hdc, &clientRect, hBrush);
-            DeleteObject(hBrush);
 
 
             // Set text color and background mode
@@ -96,7 +96,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             LPTSTR* label = TEXT("PC: ");
             // Format the string with a hexadecimal number
             wsprintf(buffer, TEXT("%s 0x%04X"), label, cpu.PC);
-            TextOut(hdc, 8, 8, buffer, lstrlen(buffer));
+            TextOut(hdc, 1000, 20, buffer, lstrlen(buffer));
             
             // Fill framebuffer from Z80 memory (grayscale)
             for (int address = 0; address < RAM_SIZE; address++) {
@@ -128,6 +128,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             bmi.bmiHeader.biCompression = BI_RGB;
             
             // Blit to window
+/*
             SetDIBitsToDevice(
                 hdc,
                 64, 64, 256, 256, // dest x, y, width, height
@@ -136,8 +137,21 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                 &bmi,
                 DIB_RGB_COLORS
             );
-            
-            
+*/
+        StretchDIBits(
+            hdc,               // destination DC
+            2, 2,      // destination x, y
+            256 * 3,         // scaled width
+            256 * 3,        // scaled height
+            0, 0,              // source x, y
+            256, 256,     // source width, height
+            framebuffer,           // pointer to bitmap bits
+            &bmi,              // BITMAPINFO structure
+            DIB_RGB_COLORS,    // color usage
+            SRCCOPY            // raster operation
+        );            
+            // Clean up
+            DeleteObject(hBrush);                        
             EndPaint(hwnd, &ps);
             return 0;            
         }
@@ -157,10 +171,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     // Initialize Z80 CPU state and memory
     // Load roms
-    if (!load_rom("BIOS.bin",0x0000)) {
-        MessageBox(NULL, L"Failed to load BIOS!", L"Muksis!", MB_OK | MB_ICONINFORMATION);
-        return 1;
-    }
+    load_rom("BIOS.bin",0x0000);
+
     // Initialize Z80 CPU
     Z80RESET(&cpu);
     
@@ -183,7 +195,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         CLASS_NAME,
         L"Pixel Drawing Window",
         WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, 500, 400,
+        CW_USEDEFAULT, CW_USEDEFAULT, 1280, 1080,
         NULL, NULL, hInstance, NULL
     );
     
