@@ -5,12 +5,14 @@
 #include "../libz80/z80.h"
 
 #define TIMER_ID 1
-#define TIMER_INTERVAL 1000
+#define TIMER_INTERVAL 100
 
 #define RAM_SIZE 0x10000 // 64KB max addressable by Z80
 
 uint8_t memory[RAM_SIZE];
 Z80Context cpu;
+
+static int width = 1280, height=1080;
 
 static byte context_mem_read_callback(size_t param, ushort address) {
     byte data = memory[address];
@@ -37,7 +39,7 @@ static void context_io_write_callback(size_t param, ushort address, byte data) {
 // Add this global buffer for the bitmap (24-bit RGB)
 uint8_t framebuffer[RAM_SIZE * 3];
 
-int load_rom(const char *filename, ushort loadAddress) {
+int load_rom(const char *filename, unsigned int loadAddress) {
     
     FILE *file;
     
@@ -48,7 +50,7 @@ int load_rom(const char *filename, ushort loadAddress) {
     }
     
     // Read file into memory
-    size_t bytesRead = fread(memory+loadAddress, 1, RAM_SIZE-1, file);
+    size_t bytesRead = fread(memory+(loadAddress&0xffff), 1, RAM_SIZE-1, file);
     
     fclose(file);
     return 0;
@@ -56,11 +58,26 @@ int load_rom(const char *filename, ushort loadAddress) {
 
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    static HDC hdcMem = NULL;
+    static HBITMAP hbmMem = NULL;
+    static HBITMAP hbmOld = NULL;
+    static HBRUSH hBrush = NULL;
+
     switch (uMsg) {
-        
         case WM_CREATE: {
             // Start a timer when the window is created
             SetTimer(hwnd, TIMER_ID, TIMER_INTERVAL, NULL);
+
+            // Set cleanup brush
+            hBrush = CreateSolidBrush(RGB(155, 155, 155)); // Gray
+
+
+            HDC hdcWindow = GetDC(hwnd);
+            hdcMem = CreateCompatibleDC(hdcWindow);
+            hbmMem = CreateCompatibleBitmap(hdcWindow, width, height);
+            hbmOld = (HBITMAP)SelectObject(hdcMem, hbmMem);
+            ReleaseDC(hwnd, hdcWindow);
+
             return 0;            
         }
         
@@ -73,38 +90,49 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
         
         case WM_PAINT: {
-            PAINTSTRUCT ps;
-            HBRUSH hBrush = CreateSolidBrush(RGB(155, 155, 155)); // Gray
-
-            /* Double buffering for flicker-free rendering
-            HDC hdcMem = CreateCompatibleDC(hdc);
-            HBITMAP hbmMem = CreateCompatibleBitmap(hdc, width, height);
-            HBITMAP hbmOld = SelectObject(hdcMem, hbmMem);
-            */
 
             // Begin painting            
+            PAINTSTRUCT ps;
+            RECT clientRect;
 
             HDC hdc = BeginPaint(hwnd, &ps);
-            
+
             // Get the client rectangle
-            RECT clientRect;
             GetClientRect(hwnd, &clientRect);
-            
+
             // Fill the background with a solid color (e.g., white)
-            FillRect(hdc, &clientRect, hBrush);
-            
+            FillRect(hdcMem, &clientRect, hBrush);
             
             // Set text color and background mode
-            SetTextColor(hdc, RGB(0, 0, 0));
-            SetBkMode(hdc, TRANSPARENT);
+            SetTextColor(hdcMem, RGB(0, 0, 0));
+            SetBkMode(hdcMem, TRANSPARENT);
             
             // printf("PC: 0x%04X\n", cpu.PC);
             LPTSTR buffer[100];
-            LPTSTR* label = TEXT("PC: ");
             // Format the string with a hexadecimal number
-            wsprintf(buffer, TEXT("%s 0x%04X"), label, cpu.PC);
-            TextOut(hdc, 1000, 20, buffer, lstrlen(buffer));
+            wsprintf(buffer, TEXT("PC: 0x%04X"), cpu.PC);
+            TextOut(hdcMem, 1050, 20, buffer, lstrlen(buffer));
+
+            wsprintf(buffer, TEXT("AF: 0x%04X"), cpu.R1.wr.AF);
+            TextOut(hdcMem, 1050, 40, buffer, lstrlen(buffer));
+
+            wsprintf(buffer, TEXT("BC: 0x%04X"), cpu.R1.wr.BC);
+            TextOut(hdcMem, 1150, 40, buffer, lstrlen(buffer));
+
+            wsprintf(buffer, TEXT("DE: 0x%04X"), cpu.R1.wr.DE);
+            TextOut(hdcMem, 1050, 60, buffer, lstrlen(buffer));
+
+            wsprintf(buffer, TEXT("HL: 0x%04X"), cpu.R1.wr.HL);
+            TextOut(hdcMem, 1150, 60, buffer, lstrlen(buffer));
             
+            wsprintf(buffer, TEXT("IX: 0x%04X"), cpu.R1.wr.IX);
+            TextOut(hdcMem, 1050, 80, buffer, lstrlen(buffer));
+
+            wsprintf(buffer, TEXT("IY: 0x%04X"), cpu.R1.wr.IY);
+            TextOut(hdcMem, 1150, 80, buffer, lstrlen(buffer));
+
+            wsprintf(buffer, TEXT("SP: 0x%04X"), cpu.R1.wr.SP);
+            TextOut(hdcMem, 1050, 100, buffer, lstrlen(buffer));
             
             // Fill framebuffer from Z80 memory (grayscale)
             for (int address = 0; address < RAM_SIZE; address++) {
@@ -132,8 +160,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             framebuffer[idx + 1] = 0xff;
             framebuffer[idx + 2] = 0xff;
             
-            
-            
             // Prepare BITMAPINFO
             BITMAPINFO bmi = {0};
             bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -143,22 +169,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             bmi.bmiHeader.biBitCount = 24;
             bmi.bmiHeader.biCompression = BI_RGB;
             
-            // Blit to window
-            /*
-            SetDIBitsToDevice(
-            hdc,
-            64, 64, 256, 256, // dest x, y, width, height
-            0, 0, 0, 256,   // src x, y, start scan, num scans
-            framebuffer,
-            &bmi,
-            DIB_RGB_COLORS
-            );
-            */
             StretchDIBits(
-                hdc,               // destination DC
-                2, 2,      // destination x, y
-                256 * 3,         // scaled width
-                256 * 3,        // scaled height
+                hdcMem,               // destination DC
+                8, 8,      // destination x, y
+                256 * 4,         // scaled width
+                256 * 4,        // scaled height
                 0, 0,              // source x, y
                 256, 256,     // source width, height
                 framebuffer,           // pointer to bitmap bits
@@ -168,26 +183,21 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             );            
 
             // Blit the framebuffer to the window
-            //            BitBlt(hdc, 0, 0, width, height, hdcMem, 0, 0, SRCCOPY);
-
-
-
-            // Clean up
-            DeleteObject(hBrush);
-            
-            // Delete the memory DC and bitmap
-            /*
-            SelectObject(hdcMem, hbmOld);
-            DeleteObject(hbmMem);
-            DeleteDC(hdcMem);
-            */
-            
+            BitBlt(hdc, 0, 0, width, height, hdcMem, 0, 0, SRCCOPY);
             EndPaint(hwnd, &ps);
+
             return 0;            
         }
         
         case WM_DESTROY: {
             KillTimer(hwnd, TIMER_ID);
+
+            // Clean up
+            DeleteObject(hBrush);
+
+            SelectObject(hdcMem, hbmOld);
+            DeleteObject(hbmMem);
+            DeleteDC(hdcMem);            
             PostQuitMessage(0);
             return 0;
         }
@@ -201,7 +211,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     
     // Initialize Z80 CPU state and memory
     // Load roms
+
     load_rom("BIOS.bin",0x0000);
+    load_rom("CPM.bin",0xdc00);
     
     // Initialize Z80 CPU
     Z80RESET(&cpu);
@@ -223,9 +235,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     HWND hwnd = CreateWindowEx(
         0,
         CLASS_NAME,
-        L"Pixel Drawing Window",
+        L"Z80 Emulator",
         WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, 1280, 1080,
+        CW_USEDEFAULT, CW_USEDEFAULT, width, height,
         NULL, NULL, hInstance, NULL
     );
     
