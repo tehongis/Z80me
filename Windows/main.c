@@ -38,14 +38,17 @@ static void context_io_write_callback(size_t param, ushort address, byte data) {
 uint8_t framebuffer[RAM_SIZE * 3];
 
 int load_rom(const char *filename, ushort loadAddress) {
-    FILE *file = fopen(filename, "rb");  // Open the file in binary read mode
-    if (!file) {
-        MessageBox(NULL, L"Unable to load BIOS!", L"Muksis!", MB_OK | MB_ICONINFORMATION);
+
+    FILE *file;
+
+    fopen_s(&file, filename, "rb");
+    if (file == NULL) {
+        MessageBox(NULL, L"Could not open the file.", L"File Error", MB_ICONERROR);
         return ERROR_FILE_NOT_FOUND;
     }
 
-    // Read file into memory
-    size_t bytesRead = fread(memory+loadAddress, 1, RAM_SIZE, file);
+        // Read file into memory
+    size_t bytesRead = fread(memory+loadAddress, 1, RAM_SIZE-1, file);
 
     fclose(file);
     return 0;
