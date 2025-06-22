@@ -8307,7 +8307,7 @@ static void SLA_off_HL (Z80Context* ctx)
 static void SLA_off_IX_d (Z80Context* ctx)
 {
 	ctx->tstates += 2;
-	signed char off = read8(ctx, ctx->PC++);
+	signed char off = read8(ctx, ctx->PC++);	
 	write8(ctx, WR.IX + off, doSL(ctx, read8(ctx, WR.IX + off), IA_A));
 }
 
@@ -8315,7 +8315,7 @@ static void SLA_off_IX_d (Z80Context* ctx)
 static void SLA_off_IY_d (Z80Context* ctx)
 {
 	ctx->tstates += 2;
-	signed char off = read8(ctx, ctx->PC++);
+	signed char off = read8(ctx, ctx->PC++);	
 	write8(ctx, WR.IY + off, doSL(ctx, read8(ctx, WR.IY + off), IA_A));
 }
 
@@ -8386,7 +8386,7 @@ static void SLL_off_HL (Z80Context* ctx)
 static void SLL_off_IX_d (Z80Context* ctx)
 {
 	ctx->tstates += 2;
-	signed char off = read8(ctx, ctx->PC++);
+	signed char off = read8(ctx, ctx->PC++);	
 	write8(ctx, WR.IX + off, doSL(ctx, read8(ctx, WR.IX + off), IA_L));
 }
 
@@ -8394,7 +8394,7 @@ static void SLL_off_IX_d (Z80Context* ctx)
 static void SLL_off_IY_d (Z80Context* ctx)
 {
 	ctx->tstates += 2;
-	signed char off = read8(ctx, ctx->PC++);
+	signed char off = read8(ctx, ctx->PC++);	
 	write8(ctx, WR.IY + off, doSL(ctx, read8(ctx, WR.IY + off), IA_L));
 }
 
@@ -8465,7 +8465,7 @@ static void SRA_off_HL (Z80Context* ctx)
 static void SRA_off_IX_d (Z80Context* ctx)
 {
 	ctx->tstates += 2;
-	signed char off = read8(ctx, ctx->PC++);
+	signed char off = read8(ctx, ctx->PC++);	
 	write8(ctx, WR.IX + off, doSR(ctx, read8(ctx, WR.IX + off), IA_A));
 }
 
@@ -8473,7 +8473,7 @@ static void SRA_off_IX_d (Z80Context* ctx)
 static void SRA_off_IY_d (Z80Context* ctx)
 {
 	ctx->tstates += 2;
-	signed char off = read8(ctx, ctx->PC++);
+	signed char off = read8(ctx, ctx->PC++);	
 	write8(ctx, WR.IY + off, doSR(ctx, read8(ctx, WR.IY + off), IA_A));
 }
 
@@ -8544,7 +8544,7 @@ static void SRL_off_HL (Z80Context* ctx)
 static void SRL_off_IX_d (Z80Context* ctx)
 {
 	ctx->tstates += 2;
-	signed char off = read8(ctx, ctx->PC++);
+	signed char off = read8(ctx, ctx->PC++);	
 	write8(ctx, WR.IX + off, doSR(ctx, read8(ctx, WR.IX + off), IA_L));
 }
 
@@ -8552,7 +8552,7 @@ static void SRL_off_IX_d (Z80Context* ctx)
 static void SRL_off_IY_d (Z80Context* ctx)
 {
 	ctx->tstates += 2;
-	signed char off = read8(ctx, ctx->PC++);
+	signed char off = read8(ctx, ctx->PC++);	
 	write8(ctx, WR.IY + off, doSR(ctx, read8(ctx, WR.IY + off), IA_L));
 }
 
